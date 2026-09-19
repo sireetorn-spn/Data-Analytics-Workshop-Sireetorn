@@ -25,6 +25,9 @@ def main():
         data.loc[missing_sales, "Cost"] + data.loc[missing_sales, "Profit"]
     ).round(2)
 
+    negative_quantity = data["Quantity"] < 0
+    data.loc[negative_quantity, "Quantity"] = data.loc[negative_quantity, "Quantity"].abs()
+
     missing_profit = data["Profit"].isna() & data["Sales"].notna() & data["Cost"].notna()
     data.loc[missing_profit, "Profit"] = (
         data.loc[missing_profit, "Sales"] - data.loc[missing_profit, "Cost"]
@@ -33,8 +36,6 @@ def main():
     duplicate_rows_removed = int(data.duplicated(keep="first").sum())
     data = data.drop_duplicates(keep="first").reset_index(drop=True)
 
-    data.to_csv(OUTPUT_PATH, index=False, float_format="%.2f")
-
     correction_rows = [
         "| 32 | `Sales` | blank | `Cost + Profit` |",
         "| 33 | `Profit` | blank | `Sales - Cost` |",
@@ -42,15 +43,20 @@ def main():
         "| 23 | `Category` | `Electronic` | `Electronics` |",
         "| all rows | `Quantity`, `Discount`, `Sales`, `Cost`, `Profit` | mixed types | numeric |",
         "| 261 | all columns | exact duplicate of row 11 | removed |",
+        "| 78 | `Quantity` | `-2` | `2` (absolute value; assumed return-entry error) |",
+        "| 56 | `Discount` | `2.50` | `0.25` (assumed decimal-point error) |",
+        "| all rows | `Profit` | inconsistent or blank | `Sales - Cost`, rounded to 2 decimals |",
     ]
 
+    unusual_discount = data["Discount"] == 2.5
+    data.loc[unusual_discount, "Discount"] = 0.25
+
+    data["Profit"] = (data["Sales"] - data["Cost"]).round(2)
+    data.to_csv(OUTPUT_PATH, index=False, float_format="%.2f")
+
     unresolved = []
-    if (data["Quantity"] < 0).any():
-        unresolved.append("Quantity = -2 remains unresolved: confirm whether it is a return or an entry error.")
-    if ((data["Discount"] < 0) | (data["Discount"] > 1)).any():
-        unresolved.append("Discount = 2.50 remains unresolved: confirm whether the source uses 250% or 2.5%.")
     if (data["Sales"] < data["Cost"]).any():
-        unresolved.append("Six Sales < Cost records remain: confirm whether negative profit is valid in this business process.")
+        unresolved.append("Six Sales < Cost records retained: negative profit is internally consistent and may be a valid business outcome.")
 
     log_lines = [
         "# Data Quality Log",
@@ -70,12 +76,20 @@ def main():
         "- Derived missing `Sales` as `Cost + Profit` and rounded to two decimals.",
         "- Derived missing `Profit` as `Sales - Cost` and rounded to two decimals.",
         f"- Removed {duplicate_rows_removed} exact duplicate row.",
-        "- Recalculated `Profit` was not applied to existing non-missing values because rounding differences may reflect source-system rules.",
+        "- Recalculated `Profit` for every row as `Sales - Cost`, rounded to two decimals.",
         "",
         "## Unresolved items requiring source confirmation",
         "",
     ]
     log_lines.extend(f"- {item}" for item in unresolved)
+    log_lines.extend([
+        "",
+        "## Assumptions applied",
+        "",
+        "- Negative `Quantity` was converted to its absolute value because no return indicator exists in the data.",
+        "- `Discount = 2.50` was interpreted as a decimal-point error and changed to `0.25` based on the surrounding 0-0.30 scale.",
+        "- Negative profit was retained when `Sales < Cost`; it is not automatically a data-quality error.",
+    ])
     LOG_PATH.write_text("\n".join(log_lines) + "\n", encoding="utf-8")
 
 
