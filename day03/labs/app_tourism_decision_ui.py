@@ -623,7 +623,7 @@ if not declining_occ.empty:
 st.markdown(
     f"""
 <div class="section-card insight-card">
-    <div class="section-label"><sp    day03/labs/app_tourism_decision_ui.pyan class="bubble">2</span>Insight Headline</div>
+    <div class="section-label"><span class="bubble">2</span>Insight Headline</div>
     <div style="font-size:1.02rem; color:#0b1f3a;">{insight_text}</div>
 </div>
 """,
