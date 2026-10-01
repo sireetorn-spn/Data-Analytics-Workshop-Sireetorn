@@ -38,16 +38,18 @@ st.markdown(
 }
 
 .block-container {
-    padding-top: 1.4rem;
+    padding-top: 2rem;
     padding-bottom: 2rem;
 }
 
 .app-title {
+    display: block;
     font-size: 2.2rem;
     font-weight: 900;
     color: var(--navy);
     margin: 0;
-    line-height: 1.1;
+    padding-top: 0.35rem;
+    line-height: 1.3;
 }
 
 .app-subtitle {
